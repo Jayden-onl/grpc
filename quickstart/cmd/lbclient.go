@@ -21,7 +21,10 @@ func main() {
 		Addresses: []resolver.Address{
 			{Addr: "localhost:50051"},
 			{Addr: "localhost:50052"},
-			{Addr: "localhost:50053"},
+			{Addr: "localhost:50063"},
+			{Addr: "localhost:50054"},
+			{Addr: "localhost:50055"},
+			{Addr: "localhost:50056"},
 		},
 	})
 	defer cleanup()
@@ -58,6 +61,23 @@ func main() {
 		log.Fatalf("could not greet again: %v", err)
 	}
 	log.Printf("Greeting: %s", r.Message)
+
+	// 测试
+	index := 0
+	for {
+		input := fmt.Sprintf("speak %v", index)
+		index++
+		//fmt.Println(input)
+
+		ctx3, cancel3 := context.WithTimeout(context.Background(), 500*time.Millisecond)
+		defer cancel3()
+		_, err := c.Say(ctx3, &pb.World{World: input})
+		if err != nil {
+			log.Println("eror: could not greet again: %v", err)
+		}
+		// log.Printf(r.Reply)
+		time.Sleep(time.Millisecond * 5)
+	}
 
 	for {
 		var input string

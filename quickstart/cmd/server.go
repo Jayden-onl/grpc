@@ -11,10 +11,16 @@ import (
 	"net"
 	"sync"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/peer"
+	"github.com/spf13/pflag"
 
 	pb "hongkang.name/grpc/quickstart/proto"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/peer"
+)
+
+var (
+	ports = pflag.StringSlice("ports", []string{":50051"}, "serve ports")
 )
 
 const (
@@ -52,56 +58,30 @@ func (s *server) Say(ctx context.Context, in *pb.World) (*pb.Reply, error) {
 }
 
 func main() {
-	lis1, err := net.Listen("tcp", port1)
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-
-	lis2, err := net.Listen("tcp", port2)
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-
-	lis3, err := net.Listen("tcp", port3)
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
+	pflag.Parse()
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func(listener net.Listener) {
-		defer wg.Done()
-		s := grpc.NewServer()
-		pb.RegisterGreeterServer(s, &server{Port: port1})
-		if err := s.Serve(listener); err != nil {
-			log.Fatalf("failed to serve lis1: %v", err)
+
+	for _, port := range *ports {
+		lis, err := net.Listen("tcp", port)
+		if err != nil {
+			log.Fatalf("failed to listen: %v", err)
 		} else {
-
+			log.Printf("listening: %v", port)
 		}
-	}(lis1)
 
-	wg.Add(1)
-	go func(listener net.Listener) {
-		defer wg.Done()
-		s := grpc.NewServer()
-		pb.RegisterGreeterServer(s, &server{Port: port2})
-		if err := s.Serve(listener); err != nil {
-			log.Fatalf("failed to serve lis2: %v", err)
-		} else {
+		wg.Add(1)
+		go func(listener net.Listener, port string) {
+			defer wg.Done()
+			s := grpc.NewServer()
+			pb.RegisterGreeterServer(s, &server{Port: port})
+			if err := s.Serve(listener); err != nil {
+				log.Fatalf("failed to serve %v: %v", port, err)
+			} else {
+				log.Printf("serving: %v", port)
+			}
+		}(lis, port)
+	}
 
-		}
-	}(lis2)
-
-	wg.Add(1)
-	go func(listener net.Listener) {
-		defer wg.Done()
-		s := grpc.NewServer()
-		pb.RegisterGreeterServer(s, &server{Port: port3})
-		if err := s.Serve(listener); err != nil {
-			log.Fatalf("failed to serve lis3: %v", err)
-		} else {
-
-		}
-	}(lis3)
 	wg.Wait()
 }
